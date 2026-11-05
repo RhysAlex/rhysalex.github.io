@@ -51,3 +51,19 @@ test('Owner authentication, private drafts, image storage and atomic publishing'
   assert.equal((await call('/auth/logout',{method:'POST',headers})).status,303);assert.equal((await call('/api/posts',{headers})).status,401);
  }finally{await mf.dispose()}
 });
+
+test('GitHub App publisher signs a short-lived token restricted to the website repository',async()=>{
+ const {publisherToken}=await import('../backend/github-app');
+ const key=await crypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
+ const der=Buffer.from(await crypto.subtle.exportKey('pkcs8',key.privateKey));
+ const pem='-----BEGIN PRIVATE KEY-----\n'+der.toString('base64').match(/.{1,64}/g)!.join('\n')+'\n-----END PRIVATE KEY-----';
+ const env={GITHUB_APP_ID:'123',GITHUB_APP_PRIVATE_KEY:pem,GITHUB_INSTALLATION_ID:'456',GITHUB_REPO:'RhysAlex/rhysalex.github.io'} as Env;
+ const result=await publisherToken(env,async(url,init)=>{
+  assert.equal(String(url),'https://api.github.com/app/installations/456/access_tokens');
+  const auth=(init!.headers as Record<string,string>).Authorization.slice(7);const [head,payload,sig]=auth.split('.');
+  const decoded=JSON.parse(Buffer.from(payload,'base64url').toString());assert.equal(decoded.iss,'123');assert.ok(decoded.exp-Math.floor(Date.now()/1000)<=540);
+  assert.ok(await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key.publicKey,Buffer.from(sig,'base64url'),new TextEncoder().encode(head+'.'+payload)));
+  assert.deepEqual(JSON.parse(init!.body as string),{repositories:['rhysalex.github.io'],permissions:{actions:'write',contents:'read'}});
+  return Response.json({token:'short-lived-test-token'});
+ });assert.equal(result,'short-lived-test-token');
+});
