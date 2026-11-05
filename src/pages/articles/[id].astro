@@ -1,0 +1,7 @@
+---
+import Base from '../../layouts/Base.astro';
+import content from '../../../.content/rendered.json';
+export function getStaticPaths(){return content.posts.map(post=>({params:{id:post.id},props:{post}}));}
+const {post:p}=Astro.props;
+---
+<Base title={p.title} description={p.summary}><article class="detail reading"><a href="/#articles" class="back">← 所有文章</a><header class="detail-heading"><span class="eyebrow">{p.category}</span><h1>{p.title}</h1><p>{p.summary}</p><div class="article-meta"><time>{p.published_at?.slice(0,10)}</time><span>RhysAlex</span><span>{Math.max(1,Math.ceil(p.body.length/450))} 分钟阅读</span></div></header><div class="prose" set:html={p.html}/><div class="article-end"><span>RhysAlex</span><a href="/#articles">返回文章列表 ↑</a></div></article></Base>

@@ -1,0 +1,67 @@
+name: Publish website
+run-name: ${{ inputs.release_id && format('release/{0}', inputs.release_id) || 'Update website' }}
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['backend/**', 'admin/**', 'docs/**', 'README.md']
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Approved publication snapshot
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      BACKEND_URL: ${{ vars.BACKEND_URL }}
+      BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
+      RELEASE_ID: ${{ inputs.release_id }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/release-signal.mjs start
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/fetch-release.mjs
+      - run: npm run build
+      - run: node scripts/check-static.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
+  report:
+    if: ${{ always() && inputs.release_id != '' }}
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: node scripts/release-signal.mjs finish
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+          BUILD_TOKEN: ${{ secrets.BUILD_TOKEN }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          RELEASE_RESULT: ${{ needs.deploy.result }}

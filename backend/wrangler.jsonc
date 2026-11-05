@@ -1,0 +1,31 @@
+{
+  "name": "rhysalex-studio",
+  "main": "index.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "assets": {
+    "directory": "../admin-dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rhysalex-content",
+      "migrations_dir": "migrations",
+      "database_id": "3d03fc53-1b1c-4d7b-9959-a12cff8673b4"
+    }
+  ],
+  "vars": {
+    "GITHUB_OWNER_ID": "249475921",
+    "GITHUB_REPO": "RhysAlex/rhysalex.github.io",
+    "GITHUB_BRANCH": "main",
+    "PUBLIC_SITE_URL": "https://rhysalex.github.io"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

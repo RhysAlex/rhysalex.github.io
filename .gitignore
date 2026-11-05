@@ -1,0 +1,17 @@
+node_modules/
+dist/
+admin-dist/
+.astro/
+.wrangler/
+.dev.vars*
+.env*
+!.env.example
+.content/
+public/media/
+outputs/
+*.log
+.DS_Store
+*.tsbuildinfo
+public/search.json
+public/release.json
+public/sitemap.xml

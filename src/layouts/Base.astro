@@ -1,0 +1,5 @@
+---
+import '../styles/global.css';
+const {title='学习与实践',description='RhysAlex 的项目实践与学习记录。'}=Astro.props;
+---
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="description" content={description}/><title>{title} · RhysAlex</title><link rel="canonical" href={new URL(Astro.url.pathname,Astro.site)}/><link rel="icon" href="/favicon.svg"/></head><body><a class="skip" href="#main">跳转到内容</a><header class="shell header"><a class="brand" href="/">RhysAlex<span class="brand-dot">.</span></a><nav aria-label="主导航"><a href="/#projects">项目</a><a href="/#articles">文章</a><a href="/#search" aria-label="搜索文章"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></a></nav></header><main id="main" class="shell"><slot/></main><footer class="shell footer"><a href="/">RhysAlex</a></footer></body></html>

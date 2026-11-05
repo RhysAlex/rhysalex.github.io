@@ -1,0 +1,37 @@
+{
+  "name": "rhysalex-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "node scripts/prepare-content.mjs && astro build",
+    "build:admin": "vite build --config admin/vite.config.ts",
+    "check": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "preview": "astro preview --host 127.0.0.1",
+    "dev:backend": "wrangler dev --config backend/wrangler.jsonc --ip 127.0.0.1 --port 8787",
+    "deploy:backend": "npm run build:admin && wrangler deploy --config backend/wrangler.jsonc"
+  },
+  "dependencies": {
+    "astro": "6.4.8",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@cloudflare/workers-types": "4.20260515.1",
+    "@vitejs/plugin-react": "6.0.2",
+    "typescript": "5.9.3",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0",
+    "tsx": "4.20.6"
+  }
+}

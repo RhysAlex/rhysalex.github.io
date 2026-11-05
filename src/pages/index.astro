@@ -1,0 +1,17 @@
+---
+import Base from '../layouts/Base.astro';
+import content from '../../.content/rendered.json';
+const posts=content.posts;
+const categories=['全部',...new Set(posts.map(p=>p.category))];
+---
+<Base><section id="projects" class="projects"><div class="section-heading"><h1>项目</h1></div><a href="/projects/dianping/" class="project-card"><div class="project-top"><h2>点评项目</h2><span class="status">学习中</span></div><p>整理业务流程、缓存设计与项目实践。</p><div class="project-bottom"><span>Java <i>·</i> Spring Boot <i>·</i> Redis <i>·</i> MySQL</span><span class="project-link">查看项目 <b>↗</b></span></div></a></section><section id="articles" class="articles"><div class="section-heading"><h1>文章</h1><label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="search" type="search" placeholder="搜索文章…" aria-label="搜索文章"/></label></div><div class="filters" aria-label="文章分类">{categories.map(c=><button data-category={c} aria-pressed={c==='全部'} class:list={{active:c==='全部'}}>{c}</button>)}</div><div class="article-list">{posts.map(p=><a class="article-row" data-post={p.id} data-category={p.category} href={`/articles/${p.id}/`}><div><h2>{p.title}</h2>{p.summary&&<p>{p.summary}</p>}<span class="muted">{p.category}</span></div><time datetime={p.published_at}>{p.published_at?.slice(0,10).replaceAll('-','.')}</time></a>)}</div><div class="empty" id="empty" role="status" hidden={posts.length>0}><span class="empty-mark" aria-hidden="true">—</span><h2 id="empty-title">还没有发布文章</h2><p id="empty-text">新的学习记录，会慢慢出现在这里。</p><button class="text-button" id="clear-search" hidden>清除筛选</button></div></section></Base>
+<script>
+let category='全部';let index:Record<string,string>={};
+const input=document.querySelector<HTMLInputElement>('#search')!;
+const rows=[...document.querySelectorAll<HTMLAnchorElement>('[data-post]')];
+function filter(){let count=0;const query=input.value.trim().toLocaleLowerCase();for(const row of rows){const match=(category==='全部'||row.dataset.category===category)&&(index[row.dataset.post!]||row.textContent||'').toLocaleLowerCase().includes(query);row.hidden=!match;if(match)count++;}const empty=document.querySelector<HTMLElement>('#empty')!;empty.hidden=count>0;if(rows.length){document.querySelector('#empty-title')!.textContent='没有找到相关文章';document.querySelector('#empty-text')!.textContent='试试其他关键词或分类。';document.querySelector<HTMLButtonElement>('#clear-search')!.hidden=false;}}
+document.querySelectorAll<HTMLButtonElement>('.filters button').forEach(b=>b.addEventListener('click',()=>{category=b.dataset.category!;document.querySelectorAll('.filters button').forEach(v=>{const active=v===b;v.classList.toggle('active',active);v.setAttribute('aria-pressed',String(active));});filter();}));
+input.addEventListener('input',filter);input.addEventListener('focus',async()=>{try{index=await (await fetch('/search.json')).json();filter()}catch{}},{once:true});
+document.querySelector('#clear-search')!.addEventListener('click',()=>{input.value='';document.querySelector<HTMLButtonElement>('.filters button')!.click();input.focus()});
+</script>
+<style>[hidden]{display:none!important}</style>
