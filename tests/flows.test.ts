@@ -9,7 +9,7 @@ import {hash} from '../backend/auth';
 test('Owner authentication, private drafts, image storage and atomic publishing',async()=>{
  const mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',compatibilityDate:'2026-05-15',d1Databases:['DB']});
  try{
-  const db=await mf.getD1Database('DB');for(const file of ['0001_initial.sql','0002_images.sql'])for(const sql of (await fs.readFile('backend/migrations/'+file,'utf8')).split(';').filter(v=>v.trim()))await db.prepare(sql).run();
+  const db=await mf.getD1Database('DB');for(const file of ['0001_initial.sql','0002_images.sql','0003_content_management.sql'])for(const sql of (await fs.readFile('backend/migrations/'+file,'utf8')).split(';').filter(v=>v.trim()))await db.prepare(sql).run();
   const env={DB:db,ASSETS:{fetch:async()=>new Response('assets')},GITHUB_OWNER_ID:'249475921',GITHUB_REPO:'RhysAlex/rhysalex.github.io',GITHUB_BRANCH:'main',PUBLIC_SITE_URL:'https://rhysalex.github.io',GITHUB_CLIENT_ID:'test-client',GITHUB_CLIENT_SECRET:'test-secret',GITHUB_PUBLISH_TOKEN:'test-publisher',BUILD_TOKEN:'test-build'} as unknown as Env;
   let githubId=249475921,dispatches=0;
   const handler=createHandler(async(url,init)=>{const path=String(url);if(path.includes('login/oauth/access_token'))return Response.json({access_token:'test-oauth-token'});if(path.endsWith('/user'))return Response.json({id:githubId});if(path.endsWith('/dispatches')){dispatches++;return new Response(null,{status:204})}if(path.includes('/runs?'))return Response.json({workflow_runs:[]});throw new Error('Unexpected GitHub endpoint: '+path)});
@@ -45,7 +45,7 @@ test('Owner authentication, private drafts, image storage and atomic publishing'
   const noLive=await (await call('/build/releases/latest',{headers:build})).json() as any;assert.equal(noLive.id,'initial');
   assert.equal((await call(`/build/releases/${saved.release.id}/finish`,{method:'POST',headers:build,body:JSON.stringify({run_id:'123',attempt:'1',result:'success'})})).status,200);
   const live=await (await call('/build/releases/latest',{headers:build})).json() as any;assert.equal(live.id,saved.release.id);
-  const retract=await call('/api/posts',{method:'POST',headers,body:JSON.stringify({...post,id:saved.id,status:'draft'})});assert.equal(retract.status,200);const withdrawn=await retract.json() as any;
+  const retract=await call('/api/posts',{method:'POST',headers,body:JSON.stringify({...post,id:saved.id,status:'published',visibility:'private'})});assert.equal(retract.status,200);const withdrawn=await retract.json() as any;
   const withdrawnData=await (await call('/build/releases/'+withdrawn.release.id,{headers:build})).json() as any;assert.equal(withdrawnData.posts.length,0);
   const stillLive=await (await call('/build/releases/latest',{headers:build})).json() as any;assert.equal(stillLive.id,saved.release.id,'Old live version stays available until new deployment succeeds');
   assert.equal((await call('/auth/logout',{method:'POST',headers})).status,303);assert.equal((await call('/api/posts',{headers})).status,401);

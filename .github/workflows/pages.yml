@@ -30,6 +30,10 @@ jobs:
           cache: npm
       - run: node scripts/release-signal.mjs start
       - run: npm ci --no-audit --no-fund
+      - run: npm run check
+        if: github.event_name == 'push'
+      - run: npm test
+        if: github.event_name == 'push'
       - run: node scripts/fetch-release.mjs
       - run: npm run build
       - run: node scripts/check-static.mjs

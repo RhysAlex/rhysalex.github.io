@@ -1,0 +1,8 @@
+---
+import Base from '../../layouts/Base.astro';
+import content from '../../../.content/rendered.json';
+export function getStaticPaths(){return content.projects.map(project=>({params:{slug:project.slug},props:{project}}));}
+const {project:p}=Astro.props;
+const posts=content.posts.filter(post=>post.project_ids.includes(p.id));
+---
+<Base title={p.title} description={p.summary}><div class="detail reading"><a href="/#projects" class="back">← 返回项目列表</a><header class="detail-heading"><span class="eyebrow">项目实践</span><h1>{p.title}</h1><span class="status">{p.state}</span>{p.start_date&&<p class="small">{p.start_date}{p.end_date?' — '+p.end_date:p.state==='学习中'?' — 至今':''}</p>}<p>{p.summary}</p><div class="content-tags">{p.tags.map(tag=><span>{tag}</span>)}</div><div class="tech-tags">{p.tech_stack.map(t=><span>{t}</span>)}</div>{p.source_url&&<a class="source-link" href={p.source_url} target="_blank" rel="noopener noreferrer">查看源码 ↗</a>}</header>{p.html&&<div class="prose" set:html={p.html}/>}<section class="related-posts"><h2>相关文章 <span class="muted small">{posts.length} 篇</span></h2>{posts.length?posts.map(post=><a class="article-row" href={`/articles/${post.id}/`}><div><h2>{post.title}</h2><p>{post.summary}</p><div class="content-tags">{post.tags.map(tag=><span>{tag}</span>)}</div></div><time>{post.published_at.slice(0,10)}</time></a>):<div class="empty"><h2>学习记录整理中</h2><p>关联到此项目的公开文章会显示在这里。</p></div>}</section></div></Base>

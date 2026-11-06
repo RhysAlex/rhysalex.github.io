@@ -1,6 +1,7 @@
+import {normalizeSnapshot,legacyProject} from "../shared/public-content.mjs";
 import {hasPublisher,publisherToken} from "./github-app";
 import {Env,Release,GithubFetch,HttpError,Post,imageKeys} from './types';
-export const snapshotSQL="SELECT COALESCE(json_group_array(json_object('id',id,'title',title,'summary',summary,'body',body,'category',category,'tags',tags,'status',status,'published_at',published_at,'updated_at',updated_at)), '[]') FROM (SELECT * FROM posts WHERE status='published' ORDER BY published_at DESC)";
+export const snapshotSQL=`SELECT json_object('version',2,'posts',json((SELECT COALESCE(json_group_array(json(public_data)),'[]') FROM posts WHERE public_data IS NOT NULL)),'projects',json((SELECT COALESCE(json_group_array(json(public_data)),'[]') FROM projects WHERE public_data IS NOT NULL)),'profile',json(COALESCE((SELECT public_json FROM profile WHERE id=1),'{}')))`;
 export function releaseStatement(env:Env,id:string,now:string){return env.DB.prepare(`INSERT INTO releases(id,state,snapshot,created_at,updated_at) VALUES(?,'pending',(${snapshotSQL}),?,?)`).bind(id,now,now)}
 export async function github(env:Env,send:GithubFetch,path:string,options:RequestInit={}){
  const token=await publisherToken(env,send);
@@ -31,6 +32,6 @@ export async function reconcile(env:Env,send:GithubFetch){
 export function publicRelease(row:Release|null){if(!row)return null;const {snapshot,...rest}=row;return rest;}
 export async function manifest(env:Env,id:string){
  const row=id==='latest'?await env.DB.prepare("SELECT * FROM releases WHERE state='succeeded' ORDER BY created_at DESC LIMIT 1").first<Release>():await env.DB.prepare('SELECT * FROM releases WHERE id=?').bind(id).first<Release>();
- if(!row){if(id==='latest')return {id:'initial',posts:[] as Post[],images:[] as string[]};throw new HttpError(404,'发布版本不存在')}
- const posts=JSON.parse(row.snapshot) as Post[];return {id:row.id,posts,images:imageKeys(posts)};
+ if(!row){if(id==='latest')return {id:'initial',...normalizeSnapshot({posts:[],projects:[legacyProject],profile:{}}),images:[] as string[]};throw new HttpError(404,'发布版本不存在')}
+ const content=normalizeSnapshot(JSON.parse(row.snapshot));return {id:row.id,...content,images:imageKeys([...content.posts,...content.projects])};
 }

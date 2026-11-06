@@ -1,0 +1,10 @@
+---
+import Base from '../layouts/Base.astro';
+import content from '../../.content/rendered.json';
+import {profileFields,educationFields,experienceFields} from '../../shared/public-content.mjs';
+const profile:any=content.profile;
+const fields=Object.entries(profileFields).filter(([key])=>profile[key]&&!['introduction','skills'].includes(key)).map(([key,label])=>({key,label,value:String(profile[key]),link:['github','website'].includes(key)&&/^https?:\/\//.test(profile[key])}));
+const groups=[{key:'education',title:'教育经历',labels:educationFields},{key:'experience',title:'工作／实习经历',labels:experienceFields}].map(group=>({...group,rows:(profile[group.key]||[]).map((row:any)=>Object.entries(group.labels).filter(([key])=>row[key]).map(([key,label])=>({label,value:row[key]})))}));
+const hasContent=fields.length||profile.introduction||profile.skills||groups.some(group=>group.rows.length);
+---
+<Base title="关于我"><div class="detail reading"><a href="/" class="back">← 返回首页</a><header class="detail-heading"><span class="eyebrow">RHYS ALEX</span><h1>关于我</h1>{profile.introduction&&<p class="profile-text">{profile.introduction}</p>}</header>{hasContent?<><dl class="profile-fields">{fields.map(field=><div><dt>{field.label}</dt><dd>{field.link?<a href={field.value} target="_blank" rel="noopener noreferrer">{field.value} ↗</a>:field.value}</dd></div>)}</dl>{profile.skills&&<section class="profile-section"><h2>技能</h2><p class="profile-text">{profile.skills}</p></section>}{groups.map(group=>group.rows.length>0&&<section class="profile-section"><h2>{group.title}</h2>{group.rows.map((row:any)=><dl class="profile-fields">{row.map((field:any)=><div><dt>{field.label}</dt><dd class="profile-text">{field.value}</dd></div>)}</dl>)}</section>)}</>:<div class="empty"><h2>个人资料整理中</h2></div>}</div></Base>

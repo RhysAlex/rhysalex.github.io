@@ -1,3 +1,4 @@
+import {contentRoute} from "./content";
 import {hasPublisher} from "./github-app";
 import {putImage,getImage} from "./images";
 import {Env,GithubFetch,HttpError,Post,Release,json,uuid,bodyJSON,validatePost} from './types';
@@ -15,31 +16,12 @@ async function route(request:Request,env:Env,send:GithubFetch):Promise<Response>
  if(path==='/api/me'&&method==='GET')return json({authenticated:await authenticated(request,env),loginReady:!!(env.GITHUB_CLIENT_ID&&env.GITHUB_CLIENT_SECRET),publishReady:!!(hasPublisher(env)&&env.BUILD_TOKEN),publicUrl:env.PUBLIC_SITE_URL});
  if(path.startsWith('/build/'))return buildRoute(request,env);
  if(path.startsWith('/api/')||path.startsWith('/media/'))await requireOwner(request,env);
- if(path==='/api/posts'&&method==='GET'){
-  const posts=(await env.DB.prepare('SELECT * FROM posts ORDER BY updated_at DESC').all<Post>()).results;const live=await manifest(env,'latest');const liveIds=new Set(live.posts.map(p=>p.id));return json(posts.map(p=>({...p,live:liveIds.has(p.id)})));
- }
+ const contentResponse=await contentRoute(request,env,send);if(contentResponse)return contentResponse;
  if(path==='/api/releases'&&method==='GET'){await reconcile(env,send);const release=await latest(env);return json(publicRelease(release));}
  if(path==='/api/releases/retry'&&method==='POST'){
   requirePublishing(env);await reconcile(env,send);const last=await latest(env);if(!last||last.state!=='failed')throw new HttpError(409,'当前没有需要重试的失败版本');
   const id=crypto.randomUUID(),now=new Date().toISOString();try{await env.DB.prepare("INSERT INTO releases(id,state,snapshot,created_at,updated_at) VALUES(?,'pending',?,?,?)").bind(id,last.snapshot,now,now).run()}catch{throw new HttpError(409,'已有发布任务正在进行，请稍后重试')}
   await dispatch(env,send,id);return json({release:publicRelease(await latest(env))});
- }
- if(path==='/api/posts'&&method==='POST'){
-  const data=validatePost(await bodyJSON(request));const old=data.id?await env.DB.prepare('SELECT * FROM posts WHERE id=?').bind(data.id).first<Post>():null;if(data.id&&!old)throw new HttpError(404,'文章不存在');
-  const needsRelease=data.status==='published'||old?.status==='published';if(needsRelease)requirePublishing(env);
-  const id=data.id||crypto.randomUUID(),now=new Date().toISOString(),published=data.status==='published'?(old?.published_at||now):null;
-  const write=old?env.DB.prepare('UPDATE posts SET title=?,summary=?,body=?,category=?,tags=?,status=?,updated_at=?,published_at=? WHERE id=?').bind(data.title,data.summary,data.body,data.category,data.tags,data.status,now,published,id):env.DB.prepare('INSERT INTO posts(id,title,summary,body,category,tags,status,created_at,updated_at,published_at) VALUES(?,?,?,?,?,?,?,?,?,?)').bind(id,data.title,data.summary,data.body,data.category,data.tags,data.status,now,now,published);
-  const releaseId=needsRelease?crypto.randomUUID():null;
-  try{await env.DB.batch(releaseId?[write,releaseStatement(env,releaseId,now)]:[write])}catch(e){if(needsRelease&&String(e).includes('UNIQUE'))throw new HttpError(409,'已有发布任务正在进行，当前修改尚未保存，请稍后再试');throw e}
-  if(releaseId)await dispatch(env,send,releaseId);
-  return json({id,status:data.status,release:releaseId?publicRelease(await latest(env)):null});
- }
- if(path==='/api/posts'&&method==='DELETE'){
-  const id=url.searchParams.get('id')||'';if(!uuid(id))throw new HttpError(400,'文章编号不正确');const old=await env.DB.prepare('SELECT * FROM posts WHERE id=?').bind(id).first<Post>();if(!old)throw new HttpError(404,'文章不存在');
-  const needsRelease=old.status==='published';if(needsRelease)requirePublishing(env);const releaseId=needsRelease?crypto.randomUUID():null,now=new Date().toISOString();
-  const remove=env.DB.prepare('DELETE FROM posts WHERE id=?').bind(id);
-  try{await env.DB.batch(releaseId?[remove,releaseStatement(env,releaseId,now)]:[remove])}catch(e){if(needsRelease&&String(e).includes('UNIQUE'))throw new HttpError(409,'已有发布任务正在进行，请稍后删除');throw e}
-  if(releaseId)await dispatch(env,send,releaseId);return json({ok:true,release:releaseId?publicRelease(await latest(env)):null});
  }
  if(path==='/api/images'&&method==='POST'){
   if(Number(request.headers.get('content-length')||0)>6*1024*1024)throw new HttpError(413,'图片不能超过 5 MB');

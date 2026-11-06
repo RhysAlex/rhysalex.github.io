@@ -18,12 +18,14 @@
       "ES2022",
       "DOM",
       "DOM.Iterable"
-    ]
+    ],
+    "allowJs": true
   },
   "include": [
     "backend/**/*.ts",
     "admin/**/*.ts",
     "admin/**/*.tsx",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "shared/**/*.mjs"
   ]
 }
